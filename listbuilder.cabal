@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 43a1b16e17140187e8cab1b5ecf7235d3b9449e9dcc2cc86a6d8ab43bc1adc8e
+-- hash: 1492474bbab08fe2a43fab816e4030c6f741c61674444c21766bb47bab30ea66
 
 name:           listbuilder
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Data.ListBuilder
       Lib
   other-modules:
       Paths_listbuilder
