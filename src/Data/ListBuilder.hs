@@ -3,19 +3,63 @@
 
 module Data.ListBuilder (module Data.ListBuilder, toList) where
 
-import Data.Monoid
+import Prelude hiding (concat, head, last, tail, replicate, repeat)
+import Data.Monoid hiding (First, getFirst, Last, getLast)
+import Data.Semigroup
 import Data.Foldable
 import Control.Applicative
 import Control.Monad
 import GHC.Exts (build, augment)
+import Data.Function (fix)
 
 newtype ListBuilder a = Build (forall b. (a -> b -> b) -> b -> b)
 
 fromList :: [a] -> ListBuilder a
 fromList xs = Build $ \cons nil -> foldr cons nil xs
 
+apply :: ListBuilder a -> [a] -> [a]
+apply (Build g) = augment g
+
+empty :: ListBuilder a
+empty = mempty
+
 singleton :: a -> ListBuilder a
-singleton = return
+singleton x = Build $ \cons xs -> cons x xs
+
+cons :: a -> ListBuilder a -> ListBuilder a
+cons x xs = pure x <> xs
+
+snoc :: ListBuilder a -> a -> ListBuilder a
+snoc xs x = xs <> pure x
+
+append :: ListBuilder a -> ListBuilder a -> ListBuilder a
+append = mappend
+
+concat :: Foldable t => t (ListBuilder a) -> ListBuilder a
+concat = fold
+
+repeat :: a -> ListBuilder a
+repeat x = Build $ \cons _ -> fix (cons x)
+
+replicate l x = unfoldr (\i -> if i < l then Just (x, i+1) else Nothing) 0
+
+head :: ListBuilder a -> Maybe a
+head (Build g) = g (const . pure) Nothing
+
+last :: ListBuilder a -> Maybe a
+last (Build g) = g go Nothing
+    where
+        go x Nothing = Just x
+        go _ mx = mx
+
+-- stolen and adapted from unfoldr in Data.List
+unfoldr :: (b -> Maybe (a, b)) -> b -> ListBuilder a
+unfoldr f b0 = Build (\c n ->
+    let go b = case f b of
+                Just (a, new_b) -> a `c` go new_b
+                Nothing         -> n
+    in go b0)
+
 
 instance Semigroup (ListBuilder a) where
     (<>) = mappend
@@ -40,9 +84,9 @@ instance Foldable ListBuilder where
     foldMap f (Build g) = g (mappend . f) mempty
 
 instance Applicative ListBuilder where
-    pure = return
+    pure = singleton
     liftA2 = liftM2
 
 instance Monad ListBuilder where
-    return x = Build $ \cons xs -> cons x xs
+    return = singleton
     (>>=) = flip foldMap
