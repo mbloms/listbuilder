@@ -25,14 +25,13 @@ instance Monoid (ListBuilder a) where
     mappend (Build xfs) (Build yfs) = Build $ \cons -> xfs cons . yfs cons
 
 instance Functor ListBuilder where
-    -- fmap could be aliased to liftM or liftA since they don't use it.
+    -- Could have used liftM as fmap, but profiling indicates this is faster.
+    -- Implementation uses the face that map can be implemented in terms of foldr:
+    -- map f = foldr (\x xs -> f x : xs) []
+    -- so fmap can be implemented as
+    -- fmap f (Build g) = Build $ \cons nil -> foldr (\x xs -> cons (f x) xs) nil (build g)
+    -- which is the same as:
     fmap f (Build g) = Build $ \cons nil -> g (\x xs -> cons (f x) xs) nil
-    -- Alternative implementations:
-    --fmap = liftM -- (or liftA)
-    ---- Original implementation based on foldr:
-    --fmap f lstbuilder = Build $ \cons nil -> foldr (\x xs -> cons (f x) xs) nil lstbuilder
-    --fmap f = foldMap (singleton . f)
-    --fmap f = fromList . map f . toList
 
 instance Foldable ListBuilder where
     toList (Build f)    = build f
